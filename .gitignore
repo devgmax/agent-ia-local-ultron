@@ -1,0 +1,14 @@
+# 1. Ambiente Virtual (Obrigatório)
+venv/
+__pycache__/
+*.pyc
+
+# 2. Base de Dados Vetorial e Memória Local (Privacidade)
+chroma_db/
+*.db
+*.sqlite3
+
+# 3. Ficheiros de Log e Memória Dinâmica
+*.json
+*.txt
+*.log
