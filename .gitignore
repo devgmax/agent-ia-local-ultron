@@ -1,5 +1,6 @@
 # 1. Ambiente Virtual (Obrigatório)
-venv/
+venv/ 
+.venv/
 __pycache__/
 *.pyc
 
