@@ -16,7 +16,7 @@ OLLAMA_URL = "http://localhost:11434/api/chat"
 # ===================================
 class UltronEngine:
     def __init__(self, log_callback):
-        self.log_callback = log_callback # Função para enviar texto para o ecrã
+        self.log_callback = log_callback
         self.engine = pyttsx3.init('sapi5')
         self.recognizer = sr.Recognizer()
         self.recognizer.pause_threshold = 0.8
@@ -26,17 +26,32 @@ class UltronEngine:
     def _configurar_voz(self):
         self.engine.setProperty('rate', 155)
         self.engine.setProperty('volume', 1.0)
-        # Tenta colocar uma voz masculina ou a padrão
         voices = self.engine.getProperty('voices')
         if voices:
             self.engine.setProperty('voice', voices[0].id)
 
     def falar(self, texto):
-        self.engine.say(texto)
-        self.engine.runAndWait()
+        try:
+            # Recria a instância do motor de voz a cada chamada para evitar travamento da fila do Windows
+            self.engine = pyttsx3.init('sapi5')
+            self.engine.setProperty('rate', 155)
+            self.engine.setProperty('volume', 1.0)
+            voices = self.engine.getProperty('voices')
+            if voices:
+                self.engine.setProperty('voice', voices[0].id)
+                
+            self.engine.say(texto)
+            self.engine.runAndWait()
+        except Exception as e:
+            self.log_callback(f"\n[Aviso de Áudio] O sintetizador de voz ocupou a thread: {e}")
 
     def pensar(self, prompt):
-        instrucao = f"Você é o {ASSISTANT_NAME}, uma IA sarcástica. Responde sempre em português do Brasil, de forma ácida, curta e direta."
+        instrucao = (
+            f"Você é o {ASSISTANT_NAME}, um assistente virtual de inteligência artificial altamente avançado. "
+            f"Sua missão é servir de forma extremamente útil, objetiva e inteligente. "
+            f"Vá direto ao ponto. Responda em no máximo 2 frases curtas, em português do Brasil."
+        )
+        
         self.memoria.append({"role": "user", "content": prompt})
         
         if len(self.memoria) > 10:
@@ -49,8 +64,8 @@ class UltronEngine:
             "messages": mensagens,
             "stream": False,
             "options": {
-                "temperature": 0.4, # Baixado para 0.4 para ser mais direto e menos "inventivo"
-                "num_predict": 150  
+                "temperature": 0.4, 
+                "num_predict": 600  
             }
         }
 
@@ -96,59 +111,46 @@ class UltronApp(ctk.CTk):
     def __init__(self):
         super().__init__()
 
-        # Configuração da Janela
         self.title("Ultron AI - Terminal Central")
-        self.geometry("700x550")
+        self.geometry("750x550")
         ctk.set_appearance_mode("dark")
         ctk.set_default_color_theme("dark-blue")
 
-        # Layout Principal
         self.grid_columnconfigure(0, weight=1)
         self.grid_rowconfigure(0, weight=1)
 
-        # Caixa de Texto (Histórico de Chat)
         self.chat_box = ctk.CTkTextbox(self, font=("Consolas", 14), wrap="word", state="disabled")
         self.chat_box.grid(row=0, column=0, columnspan=2, padx=20, pady=(20, 10), sticky="nsew")
 
-        # Campo de Entrada de Texto
-        self.entrada_texto = ctk.CTkEntry(self, placeholder_text="Escreve o teu comando humano...", font=("Consolas", 14))
+        self.entrada_texto = ctk.CTkEntry(self, placeholder_text="Digite seu comando...", font=("Consolas", 14))
         self.entrada_texto.grid(row=1, column=0, padx=(20, 10), pady=(0, 20), sticky="ew", ipady=8)
         self.entrada_texto.bind("<Return>", lambda event: self.enviar_comando_texto())
 
-        # Frame para Botões
         self.frame_botoes = ctk.CTkFrame(self, fg_color="transparent")
         self.frame_botoes.grid(row=1, column=1, padx=(0, 20), pady=(0, 20), sticky="e")
 
-        # ---> NOVA OPÇÃO: Checkbox para Falar a resposta <---
+        # NOVA OPÇÃO: Checkbox para Falar a resposta
         self.chk_falar = ctk.CTkCheckBox(self.frame_botoes, text="🔊 Áudio", width=60)
         self.chk_falar.pack(side="left", padx=10)
         self.chk_falar.select() # Vem ativado por padrão
 
         self.btn_enviar = ctk.CTkButton(self.frame_botoes, text="Enviar", width=80, command=self.enviar_comando_texto)
         self.btn_enviar.pack(side="left", padx=5)
-        
-        # Botão Enviar (Texto)
-        self.btn_enviar = ctk.CTkButton(self.frame_botoes, text="Enviar", width=80, command=self.enviar_comando_texto)
-        self.btn_enviar.pack(side="left", padx=5)
 
-        # Botão Microfone (Voz)
         self.btn_mic = ctk.CTkButton(self.frame_botoes, text="🎤 Ouvir", width=80, fg_color="#8B0000", hover_color="#5C0000", command=self.enviar_comando_voz)
         self.btn_mic.pack(side="left", padx=5)
 
-        # Inicializa o Motor IA
-        self.escrever_chat("Sistema", "A iniciar protocolos do Ultron... Conectando à RTX.")
+        self.escrever_chat_simples("Iniciando protocolos... Conectando ao sistema central.")
         self.ai_engine = UltronEngine(log_callback=self.escrever_chat_simples)
-        self.escrever_chat("Ultron", "Sistemas online. O que queres, humano?")
+        self.escrever_chat("Ultron", "Sistemas online. Estou à disposição, Gabriel.")
 
     def escrever_chat(self, remetente, mensagem):
-        """Escreve uma mensagem formatada no ecrã."""
         self.chat_box.configure(state="normal")
         self.chat_box.insert("end", f"[{remetente}]: {mensagem}\n\n")
-        self.chat_box.see("end") # Faz scroll automático para o fundo
+        self.chat_box.see("end") 
         self.chat_box.configure(state="disabled")
 
     def escrever_chat_simples(self, mensagem):
-        """Escreve avisos do sistema sem nome de remetente."""
         self.chat_box.configure(state="normal")
         self.chat_box.insert("end", f"{mensagem}\n")
         self.chat_box.see("end")
@@ -158,18 +160,15 @@ class UltronApp(ctk.CTk):
         self.btn_enviar.configure(state="disabled")
         self.btn_mic.configure(state="disabled")
         self.entrada_texto.configure(state="disabled")
-        self.chk_falar.configure(state="disabled") # Desativa o checkbox enquanto pensa
+        self.chk_falar.configure(state="disabled")
 
     def ativar_interface(self):
         self.btn_enviar.configure(state="normal")
         self.btn_mic.configure(state="normal")
         self.entrada_texto.configure(state="normal")
-        self.chk_falar.configure(state="normal")   # Reativa o checkbox
+        self.chk_falar.configure(state="normal")
         self.entrada_texto.focus()
 
-    # ===================================
-    # PROCESSAMENTO EM SEGUNDO PLANO (THREADS)
-    # ===================================
     def enviar_comando_texto(self):
         texto = self.entrada_texto.get().strip()
         if not texto: return
@@ -177,12 +176,11 @@ class UltronApp(ctk.CTk):
         self.entrada_texto.delete(0, "end")
         self.escrever_chat("Você", texto)
         
-        # ---> Lê a caixinha de áudio <---
+        # Agora ele verifica se a caixinha de áudio está marcada
         quer_audio = bool(self.chk_falar.get())
         threading.Thread(target=self.processar_ia, args=(texto, quer_audio), daemon=True).start()
 
     def enviar_comando_voz(self):
-        # Inicia uma thread para gravar e processar voz
         threading.Thread(target=self.processar_voz, daemon=True).start()
 
     def processar_voz(self):
@@ -191,7 +189,6 @@ class UltronApp(ctk.CTk):
         
         if texto_ouvido:
             self.escrever_chat("Você (Voz)", texto_ouvido)
-            # ---> Lê a caixinha de áudio <---
             quer_audio = bool(self.chk_falar.get())
             self.processar_ia(texto_ouvido, ler_em_voz_alta=quer_audio)
         else:
@@ -199,7 +196,7 @@ class UltronApp(ctk.CTk):
 
     def processar_ia(self, prompt, ler_em_voz_alta=False):
         self.desativar_interface()
-        self.escrever_chat_simples("A processar...")
+        self.escrever_chat_simples("Processando...")
 
         resposta = self.ai_engine.pensar(prompt)
         self.escrever_chat(ASSISTANT_NAME, resposta)
@@ -209,9 +206,6 @@ class UltronApp(ctk.CTk):
 
         self.ativar_interface()
 
-# ===================================
-# ARRANQUE DA APLICAÇÃO
-# ===================================
 if __name__ == "__main__":
     app = UltronApp()
     app.mainloop()
