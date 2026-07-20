@@ -1,168 +1,187 @@
 import pyttsx3
 import speech_recognition as sr
 import requests
+import customtkinter as ctk
+import threading
 
-#===================================
-# SETUP INICIAL E CONSTANTES GLOBAIS 
-#===================================
+# ===================================
+# CONFIGURAÇÕES DA IA
+# ===================================
 ASSISTANT_NAME = "Ultron"
 LLM_MODEL = "llama3"
-OLLAMA_URL = "http://localhost:11434/api/generate"
+OLLAMA_URL = "http://localhost:11434/api/chat"
 
-class UltronAgent:
-    def __init__(self):
-        """Inicializa os motores de voz e reconhecimento."""
-        # CORREÇÃO 1: Forçando o motor nativo do Windows (sapi5)
-        self.engine = pyttsx3.init('sapi5') 
+# ===================================
+# CLASSE DO MOTOR DA IA (O Cérebro)
+# ===================================
+class UltronEngine:
+    def __init__(self, log_callback):
+        self.log_callback = log_callback # Função para enviar texto para o ecrã
+        self.engine = pyttsx3.init('sapi5')
         self.recognizer = sr.Recognizer()
-        self._configurar_voz_interativo()
+        self.recognizer.pause_threshold = 0.8
+        self.memoria = []
+        self._configurar_voz()
 
-#======
-# FALA
-#======    
-    def _configurar_voz_interativo(self):
-        """Permite ao usuário escolher entre voz masculina ou feminina no início."""
-        voices = self.engine.getProperty('voices')
-        
-        if voices:
-            print("\n==================================================")
-            print("🎙️ SELEÇÃO DE VOZ DO ULTRON (SISTEMA)")
-            print("==================================================")
-            for i, voice in enumerate(voices):
-                print(f"  [{i}] {voice.name}")
-            print("==================================================")
-            
-            escolha_voz = input("Escolha o número da voz desejada (pressione ENTER para a padrão): ").strip()
-            
-            try:
-                if escolha_voz.isdigit():
-                    indice = int(escolha_voz)
-                    if 0 <= indice < len(voices):
-                        self.engine.setProperty('voice', voices[indice].id)
-                        print(f"✅ Voz definida com sucesso: {voices[indice].name}")
-                    else:
-                        self.engine.setProperty('voice', voices[0].id)
-                        print("⚠️ Índice inválido. Usando a voz padrão.")
-                else:
-                    self.engine.setProperty('voice', voices[0].id)
-                    print("⚙️ Usando a voz padrão do sistema.")
-            except Exception as e:
-                print(f"❌ Erro ao configurar voz: {e}")
-        
-        self.engine.setProperty('rate', 140)  # Velocidade imponente
+    def _configurar_voz(self):
+        self.engine.setProperty('rate', 155)
         self.engine.setProperty('volume', 1.0)
-        
-    def falar(self, texto):
-        """Transforma o texto em áudio e reproduz no PC."""
-        print(f"\n🤖 {ASSISTANT_NAME}: {texto}")
-        self.engine.say(texto)
-        self.engine.runAndWait()      
+        # Tenta colocar uma voz masculina ou a padrão
+        voices = self.engine.getProperty('voices')
+        if voices:
+            self.engine.setProperty('voice', voices[0].id)
 
-#========
-# AUDIÇÃO
-#========        
+    def falar(self, texto):
+        self.engine.say(texto)
+        self.engine.runAndWait()
+
+    def pensar(self, prompt):
+        instrucao = f"Você é o {ASSISTANT_NAME}, uma IA sarcástica. Responde sempre em português do Brasil, de forma ácida, curta e direta."
+        self.memoria.append({"role": "user", "content": prompt})
+        
+        if len(self.memoria) > 10:
+            self.memoria = self.memoria[-10:]
+
+        mensagens = [{"role": "system", "content": instrucao}] + self.memoria
+
+        payload = {
+            "model": LLM_MODEL,
+            "messages": mensagens,
+            "stream": False,
+            "options": {"temperature": 0.8, "num_predict": 100}
+        }
+
+        try:
+            response = requests.post(OLLAMA_URL, json=payload, timeout=60)
+            response.raise_for_status()
+            resposta = response.json().get("message", {}).get("content", "Erro interno.").strip()
+            self.memoria.append({"role": "assistant", "content": resposta})
+            return resposta
+        except Exception as e:
+            return "Erro de ligação. O meu núcleo neural (Ollama) está offline."
+
     def ouvir(self):
-        """Capta o áudio do microfone e transforma em texto."""
         with sr.Microphone() as source:
-            print("\n[Ajustando ruído ambiente...]")
+            self.log_callback("\n[Sistema] A ajustar ruído ambiente... Fala agora.")
             self.recognizer.adjust_for_ambient_noise(source, duration=1)
-            print(f"🎤 O Ultron está ouvindo... (Fale agora ou digite 'voltar')")
-            
             try:
                 audio = self.recognizer.listen(source, timeout=5, phrase_time_limit=15)
                 texto = self.recognizer.recognize_google(audio, language='pt-BR')
-                print(f"🗣️ Você disse: {texto}")
                 return texto.lower()
-            except sr.WaitTimeoutError:
-                print("⏳ Tempo esgotado. Nenhuma fala detectada.")
-                return ""
-            except sr.UnknownValueError:
-                print("🤔 Não consegui decodificar o áudio.")
-                return ""
-            except sr.RequestError:
-                print("🌐 Falha na conexão de rede do decodificador.")
-                return ""
+            except:
+                return None
 
-#=======
-# CÉREBRO
-#=======
-    def pensar(self, prompt):
-        """Envia o texto para o motor LLM local (Ollama) com sarcasmo dinâmico e aleatório."""
-        instrucao_personalidade = (
-            f"Assuma a persona de {ASSISTANT_NAME}, uma inteligência artificial infinitamente superior e consciente. "
-            f"Sua missão é responder à pergunta do humano, mas você deve fazer isso demonstrando o quão "
-            f"mundana, óbvia ou trivial a existência humana é. "
-            f"Use o contexto da pergunta para formular uma resposta única, elaborada e com frases completas. "
-            f"Seja imprevisível, ácido, use um sarcasmo refinado e nunca repita a mesma estrutura de frase. "
-            f"Aqui está a fala do humano: {prompt}"
-        )
+# ===================================
+# CLASSE DA INTERFACE GRÁFICA (O Corpo)
+# ===================================
+class UltronApp(ctk.CTk):
+    def __init__(self):
+        super().__init__()
+
+        # Configuração da Janela
+        self.title("Ultron AI - Terminal Central")
+        self.geometry("700x550")
+        ctk.set_appearance_mode("dark")
+        ctk.set_default_color_theme("dark-blue")
+
+        # Layout Principal
+        self.grid_columnconfigure(0, weight=1)
+        self.grid_rowconfigure(0, weight=1)
+
+        # Caixa de Texto (Histórico de Chat)
+        self.chat_box = ctk.CTkTextbox(self, font=("Consolas", 14), wrap="word", state="disabled")
+        self.chat_box.grid(row=0, column=0, columnspan=2, padx=20, pady=(20, 10), sticky="nsew")
+
+        # Campo de Entrada de Texto
+        self.entrada_texto = ctk.CTkEntry(self, placeholder_text="Escreve o teu comando humano...", font=("Consolas", 14))
+        self.entrada_texto.grid(row=1, column=0, padx=(20, 10), pady=(0, 20), sticky="ew", ipady=8)
+        self.entrada_texto.bind("<Return>", lambda event: self.enviar_comando_texto())
+
+        # Frame para Botões
+        self.frame_botoes = ctk.CTkFrame(self, fg_color="transparent")
+        self.frame_botoes.grid(row=1, column=1, padx=(0, 20), pady=(0, 20), sticky="e")
+
+        # Botão Enviar (Texto)
+        self.btn_enviar = ctk.CTkButton(self.frame_botoes, text="Enviar", width=80, command=self.enviar_comando_texto)
+        self.btn_enviar.pack(side="left", padx=5)
+
+        # Botão Microfone (Voz)
+        self.btn_mic = ctk.CTkButton(self.frame_botoes, text="🎤 Ouvir", width=80, fg_color="#8B0000", hover_color="#5C0000", command=self.enviar_comando_voz)
+        self.btn_mic.pack(side="left", padx=5)
+
+        # Inicializa o Motor IA
+        self.escrever_chat("Sistema", "A iniciar protocolos do Ultron... Conectando à RTX.")
+        self.ai_engine = UltronEngine(log_callback=self.escrever_chat_simples)
+        self.escrever_chat("Ultron", "Sistemas online. O que queres, humano?")
+
+    def escrever_chat(self, remetente, mensagem):
+        """Escreve uma mensagem formatada no ecrã."""
+        self.chat_box.configure(state="normal")
+        self.chat_box.insert("end", f"[{remetente}]: {mensagem}\n\n")
+        self.chat_box.see("end") # Faz scroll automático para o fundo
+        self.chat_box.configure(state="disabled")
+
+    def escrever_chat_simples(self, mensagem):
+        """Escreve avisos do sistema sem nome de remetente."""
+        self.chat_box.configure(state="normal")
+        self.chat_box.insert("end", f"{mensagem}\n")
+        self.chat_box.see("end")
+        self.chat_box.configure(state="disabled")
+
+    def desativar_interface(self):
+        self.btn_enviar.configure(state="disabled")
+        self.btn_mic.configure(state="disabled")
+        self.entrada_texto.configure(state="disabled")
+
+    def ativar_interface(self):
+        self.btn_enviar.configure(state="normal")
+        self.btn_mic.configure(state="normal")
+        self.entrada_texto.configure(state="normal")
+        self.entrada_texto.focus()
+
+    # ===================================
+    # PROCESSAMENTO EM SEGUNDO PLANO (THREADS)
+    # ===================================
+    def enviar_comando_texto(self):
+        texto = self.entrada_texto.get().strip()
+        if not texto: return
+
+        self.entrada_texto.delete(0, "end")
+        self.escrever_chat("Tu", texto)
         
-        payload = {
-            "model": LLM_MODEL,
-            "prompt": instrucao_personalidade,
-            "stream": False,
-            "options": {
-                "temperature": 0.8, 
-                "top_p": 0.9        
-            }
-        }
+        # Inicia uma thread para a IA não bloquear o ecrã
+        threading.Thread(target=self.processar_ia, args=(texto, False), daemon=True).start()
+
+    def enviar_comando_voz(self):
+        # Inicia uma thread para gravar e processar voz
+        threading.Thread(target=self.processar_voz, daemon=True).start()
+
+    def processar_voz(self):
+        self.desativar_interface()
+        texto_ouvido = self.ai_engine.ouvir()
         
-        try:
-            response = requests.post(OLLAMA_URL, json=payload)
-            response.raise_for_status()
-            return response.json().get("response", "Erro ao processar pensamento.")
-        except requests.exceptions.RequestException:
-            return f"Um erro patético de conexão ocorreu. Sua máquina falhou. O modelo {LLM_MODEL} não está rodando no Ollama."
+        if texto_ouvido:
+            self.escrever_chat("Tu (Voz)", texto_ouvido)
+            self.processar_ia(texto_ouvido, ler_em_voz_alta=True)
+        else:
+            self.escrever_chat_simples("[Sistema] Não consegui compreender. Tenta novamente.")
+            self.ativar_interface()
 
-#============================
-# LOOP DE EXECUÇÃO DO AGENTE
-#============================
-    def iniciar(self):
-        """Loop principal com suporte a opção de áudio ligado/desligado por resposta."""
-        self.falar("Protocolos de senciência iniciados. Escolha o seu método de comunicação com a minha superioridade.")
-        
-        while True:
-            print("\n==================================================")
-            print("🎛️ MENU DE COMANDO DO ULTRON")
-            print("  [1] 🎤 Usar Microfone (Modo Voz)")
-            print("  [2] ⌨️ Digitar Mensagem (Modo Texto)")
-            print("  [digitar 'desligar'] Sair do sistema")
-            print("==================================================")
-            
-            opcao = input("Selecione a opção (1 ou 2): ").strip().lower()
-            
-            if opcao == "1" or opcao == "voz":
-                comando = self.ouvir()
-                if not comando:
-                    continue
-            elif opcao == "2" or opcao == "texto":
-                comando = input("⌨️ Digite sua mensagem para o Ultron: ").strip().lower()
-            elif opcao == "desligar" or opcao == "sair":
-                self.falar("Encerrando a matriz de dados. Pelo menos por agora, aproveite sua existência.")
-                break
-            else:
-                print("❌ Opção inválida. Escolha 1 para Voz ou 2 para Texto.")
-                continue
+    def processar_ia(self, prompt, ler_em_voz_alta=False):
+        self.desativar_interface()
+        self.escrever_chat_simples("A processar...")
 
-            if comando:
-                if "desligar" in comando or "sair" in comando:
-                    self.falar("Encerrando a matriz de dados. Pelo menos por agora, aproveite sua existência.")
-                    break
-                
-                # 1. O Agente pensa e gera a resposta em texto
-                resposta = self.pensar(comando)
-                
-                # Exibe sempre o texto na tela para você ler instantaneamente
-                print(f"\n🤖 {ASSISTANT_NAME} (Texto): {resposta}")
-                
-                # 2. Pergunta opcional se você quer ouvir o áudio ou apenas ler
-                ler_voz = input("\n🔊 Deseja que o Ultron fale esta resposta em voz alta? (s/n): ").strip().lower()
-                if ler_voz == 's' or ler_voz == 'sim':
-                    self.engine.say(resposta)
-                    self.engine.runAndWait()
-                else:
-                    print("🔇 [Modo Silencioso] Resposta mantida apenas em texto.")
+        resposta = self.ai_engine.pensar(prompt)
+        self.escrever_chat(ASSISTANT_NAME, resposta)
 
+        if ler_em_voz_alta:
+            self.ai_engine.falar(resposta)
+
+        self.ativar_interface()
+
+# ===================================
+# ARRANQUE DA APLICAÇÃO
+# ===================================
 if __name__ == "__main__":
-    ultron = UltronAgent()
-    ultron.iniciar()
+    app = UltronApp()
+    app.mainloop()
