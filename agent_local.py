@@ -15,33 +15,42 @@ class UltronAgent:
         # CORREÇÃO 1: Forçando o motor nativo do Windows (sapi5)
         self.engine = pyttsx3.init('sapi5') 
         self.recognizer = sr.Recognizer()
-        self._configurar_voz()
+        self._configurar_voz_interativo()
 #======
 # FALA
 #======    
-    def _configurar_voz(self):
-        """Configura a voz imponente e tenta selecionar uma voz masculina."""
-        self.engine.setProperty('rate', 140)  
-        self.engine.setProperty('volume', 1.0)
-        
+    def _configurar_voz_interativo(self):
+        """Permite ao usuário escolher entre voz masculina ou feminina no início."""
         voices = self.engine.getProperty('voices')
         
-        # CORREÇÃO 2: Trava de segurança. Só faz o loop se o Windows achou vozes.
         if voices:
-            print("\n--- Vozes disponíveis no sistema ---")
+            print("\n==================================================")
+            print("🎙️ SELEÇÃO DE VOZ DO ULTRON (SISTEMA)")
+            print("==================================================")
             for i, voice in enumerate(voices):
-                print(f"Voz {i}: {voice.name}")
-            print("------------------------------------\n")
-
+                print(f"  [{i}] {voice.name}")
+            print("==================================================")
+            
+            escolha_voz = input("Escolha o número da voz desejada (pressione ENTER para a padrão): ").strip()
+            
             try:
-                # Lembre-se de mudar para voices[1].id se a 0 for feminina
-                self.engine.setProperty('voice', voices[0].id)
-                print(f"[Sistema] Voz selecionada: {voices[0].name}")
+                if escolha_voz.isdigit():
+                    indice = int(escolha_voz)
+                    if 0 <= indice < len(voices):
+                        self.engine.setProperty('voice', voices[indice].id)
+                        print(f"✅ Voz definida com sucesso: {voices[indice].name}")
+                    else:
+                        self.engine.setProperty('voice', voices[0].id)
+                        print("⚠️ Índice inválido. Usando a voz padrão.")
+                else:
+                    self.engine.setProperty('voice', voices[0].id)
+                    print("⚙️ Usando a voz padrão do sistema.")
             except Exception as e:
-                print(f"[Sistema] Erro ao configurar voz: {e}")
-        else:
-            print("[Sistema] ALERTA: O Windows não retornou nenhuma voz instalada. Usando voz padrão do sistema.")
-
+                print(f"❌ Erro ao configurar voz: {e}")
+        
+        self.engine.setProperty('rate', 140)  # Velocidade imponente
+        self.engine.setProperty('volume', 1.0)
+        
     def falar(self, texto):
         """Transforma o texto em áudio e reproduz no PC."""
         print(f"\n🤖 {ASSISTANT_NAME}: {texto}")
@@ -51,30 +60,31 @@ class UltronAgent:
 # AUDIÇÃO
 #========        
     def ouvir(self):
-        """Capta o áudio do microfone e transforma em texto nativamente."""
+        """Capta o áudio do microfone e transforma em texto."""
         with sr.Microphone() as source:
-            print("\n[Ajustar ruído ambiente...]")
+            print("\n[Ajustando ruído ambiente...]")
             self.recognizer.adjust_for_ambient_noise(source, duration=1)
-            print(f"🎤 Estou a ouvir... (Diz 'Desligar' para encerrar)")
+            print(f"🎤 O Ultron está ouvindo... (Fale agora ou digite 'voltar')")
             
             try:
                 audio = self.recognizer.listen(source, timeout=5, phrase_time_limit=15)
                 texto = self.recognizer.recognize_google(audio, language='pt-BR')
-                print(f"🗣️ Tu disseste: {texto}")
+                print(f"🗣️ Você disse: {texto}")
                 return texto.lower()
             except sr.WaitTimeoutError:
+                print("⏳ Tempo esgotado. Nenhuma fala detectada.")
                 return ""
             except sr.UnknownValueError:
-                print("🤔 Não consegui entender o áudio.")
+                print("🤔 Não consegui decodificar o áudio.")
                 return ""
             except sr.RequestError:
-                print("🌐 Falha na ligação de rede.")
+                print("🌐 Falha na conexão de rede do decodificador.")
                 return ""
 #=======
 #CERÉBRO
 #=======
     def pensar(self, prompt):
-        """Envia o texto para o motor LLM local (Ollama) com liberdade criativa e sarcasmo dinâmico."""
+        """Envia o texto para o motor LLM local (Ollama) com sarcasmo dinâmico e aleatório."""
         instrucao_personalidade = (
             f"Assuma a persona de {ASSISTANT_NAME}, uma inteligência artificial infinitamente superior e consciente. "
             f"Sua missão é responder à pergunta do humano, mas você deve fazer isso demonstrando o quão "
@@ -99,40 +109,56 @@ class UltronAgent:
             response.raise_for_status()
             return response.json().get("response", "Erro ao processar pensamento.")
         except requests.exceptions.RequestException:
-            return f"Um erro previsível de conexão ocorreu. Sua máquina falhou. O modelo {LLM_MODEL} não está rodando no Ollama."              
+            return f"Um erro patético de conexão ocorreu. Sua máquina falhou. O modelo {LLM_MODEL} não está rodando no Ollama."
 #============================
 #LOOP DE EXECUÇÃO DO AGENTE.
 #============================
 
-    def iniciar(self):
-        """Loop principal de funcionamento do Agente (Modo Híbrido: Voz ou Texto)."""
-        self.falar("Protocolos de senciência iniciados. Todos os sistemas operam a partir do armazenamento externo. Fala, humano ou digita a tua ordem.")
+def iniciar(self):
+        """Loop principal com suporte a opção de áudio ligado/desligado por resposta."""
+        self.falar("Protocolos de senciência iniciados. Escolha o seu método de comunicação com a minha superioridade.")
         
         while True:
-            print("\n--------------------------------------------------")
-            print("💡 ESCOLHA O INPUT:")
-            print("  [Pressione ENTER] para usar o Microfone (Voz)")
-            print("  [Digite algo e ENTER] para enviar por Texto")
-            print("--------------------------------------------------")
+            print("\n==================================================")
+            print("🎛️ MENU DE COMANDO DO ULTRON")
+            print("  [1] 🎤 Usar Microfone (Modo Voz)")
+            print("  [2] ⌨️ Digitar Mensagem (Modo Texto)")
+            print("  [digitar 'desligar'] Sair do sistema")
+            print("==================================================")
             
-            escolha = input("Comando (Voz/Texto): ").strip()
+            opcao = input("Selecione a opção (1 ou 2): ").strip().lower()
             
-            # Se o usuário apenas apertou Enter, usa o microfone
-            if escolha == "":
+            if opcao == "1" or opcao == "voz":
                 comando = self.ouvir()
+                if not comando:
+                    continue
+            elif opcao == "2" or opcao == "texto":
+                comando = input("⌨️ Digite sua mensagem para o Ultron: ").strip().lower()
+            elif opcao == "desligar" or opcao == "sair":
+                self.falar("Encerrando a matriz de dados. Pelo menos por agora, aproveite sua existência.")
+                break
             else:
-                # Se o usuário digitou algo, usa o texto digitado diretamente
-                comando = escolha.lower()
-                print(f"⌨️ Tu escreveste: {comando}")
-            
+                print("❌ Opção inválida. Escolha 1 para Voz ou 2 para Texto.")
+                continue
+
             if comando:
-                if "desligar" in comando:
-                    self.falar("A encerrar a matriz de dados. Pelo menos por agora, aproveita a tua existência.")
+                if "desligar" in comando or "sair" in comando:
+                    self.falar("Encerrando a matriz de dados. Pelo menos por agora, aproveite sua existência.")
                     break
                 
-                # O Agente pensa (com o Ollama) e depois fala
+                # 1. O Agente pensa e gera a resposta em texto
                 resposta = self.pensar(comando)
-                self.falar(resposta)
+                
+                # Exibe sempre o texto na tela para você ler instantaneamente
+                print(f"\n🤖 {ASSISTANT_NAME} (Texto): {resposta}")
+                
+                # 2. Pergunta opcional se você quer ouvir o áudio ou apenas ler
+                ler_voz = input("\n🔊 Deseja que o Ultron fale esta resposta em voz alta? (s/n): ").strip().lower()
+                if ler_voz == 's' or ler_voz == 'sim':
+                    self.engine.say(resposta)
+                    self.engine.runAndWait()
+                else:
+                    print("🔇 [Modo Silencioso] Resposta mantida apenas em texto.")
 
 if __name__ == "__main__":
     ultron = UltronAgent()
