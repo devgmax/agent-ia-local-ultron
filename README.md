@@ -1,55 +1,377 @@
-# 🤖 Projeto Ultron: Agente IA Local (Open-Source)
+# 🤖 Projeto Ultron: Agente de IA Local
+
+[![Python](https://img.shields.io/badge/Python-3.12+-blue.svg)](https://www.python.org/)
+[![Ollama](https://img.shields.io/badge/Ollama-Llama3-orange.svg)](https://ollama.com/)
+[![CustomTkinter](https://img.shields.io/badge/GUI-CustomTkinter-darkblue.svg)](https://github.com/TomSchimansky/CustomTkinter)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 ---
 
-## 🇧🇷 Português
+# 🇧🇷 Português (PT-BR)
 
-Este é um projeto de código aberto para criar o seu próprio Agente de Inteligência Artificial 100% local, focado em privacidade e performance bruta. Ele ouve comandos pelo microfone, processa o pensamento usando modelos LLM robustos via **Ollama**, e responde com voz através do seu computador.
+## Sobre o Projeto
 
-O agente possui uma instrução de sistema (System Prompt) customizável, atualmente configurada para responder com o sarcasmo e a acidez de uma verdadeira inteligência artificial superior.
+O **Ultron** é um assistente de Inteligência Artificial executado **100% localmente**, sem necessidade de APIs pagas ou envio das conversas para servidores externos.
 
-### ⚙️ Como Instalar e Rodar
+O projeto reúne em uma única aplicação desktop:
 
-**1. Instale o motor de IA (Ollama)**
-* Baixe e instale o Ollama.
-* No terminal, baixe o modelo de inteligência desejado rodando: `ollama run llama3`
+- Interface gráfica moderna
+- Modelo de linguagem executado pelo Ollama
+- Memória persistente em JSON
+- Reconhecimento de voz (Speech-to-Text)
+- Síntese de voz (Text-to-Speech)
+- Conversação contextual
+- Execução multithread para manter a interface sempre responsiva
 
-**2. Clone o repositório e prepare o ambiente**
-* Ative o ambiente virtual no Windows rodando `venv\Scripts\activate` ou no Mac/Linux rodando `source venv/bin/activate`.
-
-**3. Instale as dependências de Áudio e Python**
-* Execute a instalação: `pip install pyttsx3 speechrecognition pyaudio requests`
-* Nota: No Windows, se o `pyaudio` falhar, você pode precisar instalar o pacote `pipwin` e depois rodar `pipwin install pyaudio`.
-
-**4. Customize seu Assistente**
-* Abra o arquivo `agente_local.py` e altere a variável global no topo do arquivo para mudar o nome do bot, e edite o método `pensar()` para alterar a personalidade dele.
-
-**5. Rode o Agente!**
-* Inicie o robô com o comando `python agente_local.py`
+Toda a inteligência roda diretamente no computador do usuário.
 
 ---
 
-## 🇺🇸 English
+# 🚀 Funcionalidades
 
-This is an open-source project to create your own 100% local, privacy-focused Artificial Intelligence Agent. It listens to microphone commands, processes thoughts using robust LLMs via **Ollama**, and responds with voice through your computer.
+- Interface moderna utilizando **CustomTkinter**
+- Execução totalmente offline
+- Conversação contextual
+- Memória persistente em JSON
+- Aprendizado por comandos de memória
+- Entrada por texto
+- Entrada por voz
+- Resposta por voz
+- Processamento em segundo plano utilizando Threads
+- Compatível com Windows
 
-The agent features a customizable System Prompt, currently configured to respond with the sarcasm and acidity of a true superior artificial intelligence.
+---
 
-### ⚙️ How to Install and Run
+# 🏗 Arquitetura
 
-**1. Install the AI Engine (Ollama)**
-* Download and install Ollama.
-* In your terminal, download your preferred AI model by running: `ollama run llama3`
+| Componente | Tecnologia |
+|------------|------------|
+| Interface | CustomTkinter |
+| IA Local | Ollama |
+| Modelo | Llama 3 |
+| STT | SpeechRecognition |
+| TTS | pyttsx3 |
+| Banco de Dados | JSON |
+| Comunicação | Requests |
+| Concorrência | Threading |
 
-**2. Clone the repository and setup the environment**
-* Activate the virtual environment on Windows using `venv\Scripts\activate` or on Mac/Linux using `source venv/bin/activate`.
+---
 
-**3. Install Audio and Python dependencies**
-* Run the installation: `pip install pyttsx3 speechrecognition pyaudio requests`
-* Note: On Windows, if `pyaudio` fails, you may need to install the `pipwin` package and then run `pipwin install pyaudio`.
+# 📋 Requisitos
 
-**4. Customize your Assistant**
-* Open the `agente_local.py` file to change the global name variable, and edit the `pensar()` method to tweak the agent's core personality.
+- Windows 10 ou Windows 11
+- Python 3.12 ou superior
+- Ollama instalado
+- Microfone (opcional)
+- Caixa de som (opcional)
 
-**5. Run the Agent!**
-* Start the robot by running `python agente_local.py`
+---
+
+# ⚙️ Instalação
+
+## 1. Instale o Python
+
+Baixe a versão mais recente do Python:
+
+https://www.python.org/downloads/
+
+Durante a instalação marque:
+
+```
+Add Python to PATH
+```
+
+Depois confirme:
+
+```powershell
+python --version
+```
+
+---
+
+## 2. Instale o Ollama
+
+Baixe:
+
+https://ollama.com/download
+
+Após instalar confirme:
+
+```powershell
+ollama --version
+```
+
+---
+
+## 3. Baixe o modelo Llama 3
+
+Abra um terminal e execute:
+
+```powershell
+ollama pull llama3
+```
+
+Depois inicie o servidor:
+
+```powershell
+ollama serve
+```
+
+Deixe essa janela aberta.
+
+---
+
+## 4. Clone o projeto
+
+```powershell
+git clone https://github.com/SEU_USUARIO/Ultron.git
+```
+
+Entre na pasta:
+
+```powershell
+cd Ultron
+```
+
+---
+
+## 5. Crie um Ambiente Virtual
+
+```powershell
+python -m venv .venv
+```
+
+---
+
+## 6. Ative o Ambiente Virtual
+
+Windows PowerShell
+
+```powershell
+.venv\Scripts\Activate.ps1
+```
+
+Windows CMD
+
+```cmd
+.venv\Scripts\activate.bat
+```
+
+---
+
+## 7. Atualize o Pip
+
+```powershell
+python -m pip install --upgrade pip
+```
+
+---
+
+## 8. Instale as Dependências
+
+Caso exista o arquivo requirements.txt:
+
+```powershell
+pip install -r requirements.txt
+```
+
+Ou instale manualmente:
+
+```powershell
+pip install customtkinter
+```
+
+```powershell
+pip install requests
+```
+
+```powershell
+pip install speechrecognition
+```
+
+```powershell
+pip install pyttsx3
+```
+
+```powershell
+pip install pyaudio
+```
+
+---
+
+## 9. Caso o PyAudio apresente erro
+
+Em alguns computadores o PyAudio pode exigir compiladores C++.
+
+Caso isso aconteça utilize um Wheel (.whl) compatível com sua versão do Python ou instale o Build Tools da Microsoft.
+
+---
+
+## 10. Execute a aplicação
+
+```powershell
+python ultron_app.py
+```
+
+---
+
+# 🧠 Memória Persistente
+
+O Ultron possui memória local utilizando um arquivo JSON.
+
+Sempre que comandos de memória forem detectados, as informações serão armazenadas automaticamente.
+
+Exemplos:
+
+```
+Lembre que meu nome é Fulano.
+```
+
+```
+Memorize que meu projeto utiliza CustomTkinter.
+```
+
+```
+Guarde que meu computador possui RTX 3060.
+```
+
+
+
+As informações ficam disponíveis nas próximas conversas.
+
+---
+
+# 📁 Estrutura do Projeto
+
+```
+Ultron/
+
+├── ultron_app.py
+├── memoria.py
+├── memoria_ultron.json
+├── requirements.txt
+├── README.md
+└── LICENSE
+```
+
+---
+
+# 🔒 Privacidade
+
+Todo o processamento acontece localmente.
+
+Nenhuma conversa é enviada para APIs externas.
+
+A memória é armazenada apenas no computador do usuário.
+
+---
+
+# 🛡 .gitignore Recomendado
+
+```gitignore
+# Ambiente Virtual
+
+venv/
+.venv/
+
+# Python
+
+__pycache__/
+*.pyc
+
+# Banco de Dados
+
+memoria_ultron.json
+*.db
+*.sqlite3
+
+# Logs
+
+*.log
+```
+
+---
+
+# 🇺🇸 English
+
+## About
+
+Ultron is a **100% local AI desktop assistant** powered by Ollama and Llama 3.
+
+Features include:
+
+- Modern desktop interface
+- Local LLM inference
+- Persistent JSON memory
+- Speech Recognition
+- Text-to-Speech
+- Context-aware conversations
+- Background multithreading
+
+Everything runs directly on the user's computer.
+
+---
+
+## Installation
+
+Install Python:
+
+https://www.python.org/downloads/
+
+Install Ollama:
+
+https://ollama.com/download
+
+Download the model:
+
+```bash
+ollama pull llama3
+```
+
+Start Ollama:
+
+```bash
+ollama serve
+```
+
+Clone the repository:
+
+```bash
+git clone https://github.com/SEU_USUARIO/Ultron.git
+```
+
+Create a virtual environment:
+
+```bash
+python -m venv .venv
+```
+
+Activate:
+
+```bash
+.venv\Scripts\Activate.ps1
+```
+
+Install dependencies:
+
+```bash
+pip install -r requirements.txt
+```
+
+Run the application:
+
+```bash
+python ultron_app.py
+```
+
+---
+
+# 📄 License
+
+This project is licensed under the MIT License.
+
+See the **LICENSE** file for details.
+
+---
+
+**Developed by Gabriel Max**
