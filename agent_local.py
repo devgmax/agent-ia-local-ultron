@@ -48,7 +48,10 @@ class UltronEngine:
             "model": LLM_MODEL,
             "messages": mensagens,
             "stream": False,
-            "options": {"temperature": 0.8, "num_predict": 100}
+            "options": {
+                "temperature": 0.4, # Baixado para 0.4 para ser mais direto e menos "inventivo"
+                "num_predict": 150  
+            }
         }
 
         try:
@@ -57,19 +60,34 @@ class UltronEngine:
             resposta = response.json().get("message", {}).get("content", "Erro interno.").strip()
             self.memoria.append({"role": "assistant", "content": resposta})
             return resposta
-        except Exception as e:
-            return "Erro de ligação. O meu núcleo neural (Ollama) está offline."
+        except Exception:
+            return "Erro de conexão. Meu núcleo neural está offline."
 
     def ouvir(self):
-        with sr.Microphone() as source:
-            self.log_callback("\n[Sistema] A ajustar ruído ambiente... Fala agora.")
-            self.recognizer.adjust_for_ambient_noise(source, duration=1)
-            try:
-                audio = self.recognizer.listen(source, timeout=5, phrase_time_limit=15)
-                texto = self.recognizer.recognize_google(audio, language='pt-BR')
-                return texto.lower()
-            except:
-                return None
+        """Agora com tratamento de erros explícito para descobrirmos o problema do microfone."""
+        try:
+            with sr.Microphone() as source:
+                self.log_callback("\n[Sistema] Ajustando microfone... Pode falar!")
+                self.recognizer.adjust_for_ambient_noise(source, duration=1)
+                try:
+                    audio = self.recognizer.listen(source, timeout=5, phrase_time_limit=15)
+                    texto = self.recognizer.recognize_google(audio, language='pt-BR')
+                    return texto.lower()
+                except sr.WaitTimeoutError:
+                    self.log_callback("\n[Erro] Você não falou nada ou o microfone está muito baixo.")
+                    return None
+                except sr.UnknownValueError:
+                    self.log_callback("\n[Erro] Não entendi o que foi dito. Tente falar mais perto.")
+                    return None
+                except Exception as e:
+                    self.log_callback(f"\n[Erro no Google Speech] {e}")
+                    return None
+        except OSError as e:
+            self.log_callback(f"\n[ERRO CRÍTICO] O Windows bloqueou o microfone ou ele não foi encontrado: {e}")
+            return None
+        except Exception as e:
+            self.log_callback(f"\n[ERRO DESCONHECIDO] Falha ao iniciar o microfone: {e}")
+            return None
 
 # ===================================
 # CLASSE DA INTERFACE GRÁFICA (O Corpo)
@@ -101,6 +119,14 @@ class UltronApp(ctk.CTk):
         self.frame_botoes = ctk.CTkFrame(self, fg_color="transparent")
         self.frame_botoes.grid(row=1, column=1, padx=(0, 20), pady=(0, 20), sticky="e")
 
+        # ---> NOVA OPÇÃO: Checkbox para Falar a resposta <---
+        self.chk_falar = ctk.CTkCheckBox(self.frame_botoes, text="🔊 Áudio", width=60)
+        self.chk_falar.pack(side="left", padx=10)
+        self.chk_falar.select() # Vem ativado por padrão
+
+        self.btn_enviar = ctk.CTkButton(self.frame_botoes, text="Enviar", width=80, command=self.enviar_comando_texto)
+        self.btn_enviar.pack(side="left", padx=5)
+        
         # Botão Enviar (Texto)
         self.btn_enviar = ctk.CTkButton(self.frame_botoes, text="Enviar", width=80, command=self.enviar_comando_texto)
         self.btn_enviar.pack(side="left", padx=5)
@@ -132,11 +158,13 @@ class UltronApp(ctk.CTk):
         self.btn_enviar.configure(state="disabled")
         self.btn_mic.configure(state="disabled")
         self.entrada_texto.configure(state="disabled")
+        self.chk_falar.configure(state="disabled") # Desativa o checkbox enquanto pensa
 
     def ativar_interface(self):
         self.btn_enviar.configure(state="normal")
         self.btn_mic.configure(state="normal")
         self.entrada_texto.configure(state="normal")
+        self.chk_falar.configure(state="normal")   # Reativa o checkbox
         self.entrada_texto.focus()
 
     # ===================================
@@ -147,10 +175,11 @@ class UltronApp(ctk.CTk):
         if not texto: return
 
         self.entrada_texto.delete(0, "end")
-        self.escrever_chat("Tu", texto)
+        self.escrever_chat("Você", texto)
         
-        # Inicia uma thread para a IA não bloquear o ecrã
-        threading.Thread(target=self.processar_ia, args=(texto, False), daemon=True).start()
+        # ---> Lê a caixinha de áudio <---
+        quer_audio = bool(self.chk_falar.get())
+        threading.Thread(target=self.processar_ia, args=(texto, quer_audio), daemon=True).start()
 
     def enviar_comando_voz(self):
         # Inicia uma thread para gravar e processar voz
@@ -161,10 +190,11 @@ class UltronApp(ctk.CTk):
         texto_ouvido = self.ai_engine.ouvir()
         
         if texto_ouvido:
-            self.escrever_chat("Tu (Voz)", texto_ouvido)
-            self.processar_ia(texto_ouvido, ler_em_voz_alta=True)
+            self.escrever_chat("Você (Voz)", texto_ouvido)
+            # ---> Lê a caixinha de áudio <---
+            quer_audio = bool(self.chk_falar.get())
+            self.processar_ia(texto_ouvido, ler_em_voz_alta=quer_audio)
         else:
-            self.escrever_chat_simples("[Sistema] Não consegui compreender. Tenta novamente.")
             self.ativar_interface()
 
     def processar_ia(self, prompt, ler_em_voz_alta=False):
