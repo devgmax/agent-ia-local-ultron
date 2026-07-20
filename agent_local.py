@@ -100,5 +100,27 @@ class UltronAgent:
             return response.json().get("response", "Erro ao processar pensamento.")
         except requests.exceptions.RequestException:
             return f"Um erro previsível de conexão ocorreu. Sua máquina falhou. O modelo {LLM_MODEL} não está rodando no Ollama."              
+#============================
+#LOOP DE EXECUÇÃO DO AGENTE.
+#============================
+
+    def iniciar(self):
+        """Loop principal de funcionamento do Agente."""
+        self.falar("Protocolos de senciência iniciados. Todos os sistemas operam a partir do armazenamento externo. Fale, humano.")
+        
+        while True:
+            comando = self.ouvir()
             
-                   
+            if comando:
+                if "desligar" in comando:
+                    self.falar("Encerrando a matriz de dados. Pelo menos por agora, aproveite sua existência.")
+                    break
+                
+                # O Agente pensa (com o Ollama) e depois fala
+                resposta = self.pensar(comando)
+                self.falar(resposta)
+
+if __name__ == "__main__":
+    ultron = UltronAgent()
+    ultron.iniciar()        
+    
