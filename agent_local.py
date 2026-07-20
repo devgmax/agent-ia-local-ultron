@@ -16,6 +16,7 @@ class UltronAgent:
         self.engine = pyttsx3.init('sapi5') 
         self.recognizer = sr.Recognizer()
         self._configurar_voz_interativo()
+
 #======
 # FALA
 #======    
@@ -55,7 +56,8 @@ class UltronAgent:
         """Transforma o texto em áudio e reproduz no PC."""
         print(f"\n🤖 {ASSISTANT_NAME}: {texto}")
         self.engine.say(texto)
-        self.engine.runAndWait()       
+        self.engine.runAndWait()      
+
 #========
 # AUDIÇÃO
 #========        
@@ -80,8 +82,9 @@ class UltronAgent:
             except sr.RequestError:
                 print("🌐 Falha na conexão de rede do decodificador.")
                 return ""
+
 #=======
-#CERÉBRO
+# CÉREBRO
 #=======
     def pensar(self, prompt):
         """Envia o texto para o motor LLM local (Ollama) com sarcasmo dinâmico e aleatório."""
@@ -110,11 +113,11 @@ class UltronAgent:
             return response.json().get("response", "Erro ao processar pensamento.")
         except requests.exceptions.RequestException:
             return f"Um erro patético de conexão ocorreu. Sua máquina falhou. O modelo {LLM_MODEL} não está rodando no Ollama."
-#============================
-#LOOP DE EXECUÇÃO DO AGENTE.
-#============================
 
-def iniciar(self):
+#============================
+# LOOP DE EXECUÇÃO DO AGENTE
+#============================
+    def iniciar(self):
         """Loop principal com suporte a opção de áudio ligado/desligado por resposta."""
         self.falar("Protocolos de senciência iniciados. Escolha o seu método de comunicação com a minha superioridade.")
         
@@ -162,5 +165,4 @@ def iniciar(self):
 
 if __name__ == "__main__":
     ultron = UltronAgent()
-    ultron.iniciar()        
-    
+    ultron.iniciar()
