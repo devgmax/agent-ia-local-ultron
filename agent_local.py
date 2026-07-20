@@ -105,15 +105,29 @@ class UltronAgent:
 #============================
 
     def iniciar(self):
-        """Loop principal de funcionamento do Agente."""
-        self.falar("Protocolos de senciência iniciados. Todos os sistemas operam a partir do armazenamento externo. Fale, humano.")
+        """Loop principal de funcionamento do Agente (Modo Híbrido: Voz ou Texto)."""
+        self.falar("Protocolos de senciência iniciados. Todos os sistemas operam a partir do armazenamento externo. Fala, humano ou digita a tua ordem.")
         
         while True:
-            comando = self.ouvir()
+            print("\n--------------------------------------------------")
+            print("💡 ESCOLHA O INPUT:")
+            print("  [Pressione ENTER] para usar o Microfone (Voz)")
+            print("  [Digite algo e ENTER] para enviar por Texto")
+            print("--------------------------------------------------")
+            
+            escolha = input("Comando (Voz/Texto): ").strip()
+            
+            # Se o usuário apenas apertou Enter, usa o microfone
+            if escolha == "":
+                comando = self.ouvir()
+            else:
+                # Se o usuário digitou algo, usa o texto digitado diretamente
+                comando = escolha.lower()
+                print(f"⌨️ Tu escreveste: {comando}")
             
             if comando:
                 if "desligar" in comando:
-                    self.falar("Encerrando a matriz de dados. Pelo menos por agora, aproveite sua existência.")
+                    self.falar("A encerrar a matriz de dados. Pelo menos por agora, aproveita a tua existência.")
                     break
                 
                 # O Agente pensa (com o Ollama) e depois fala
